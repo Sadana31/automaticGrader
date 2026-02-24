@@ -1,11 +1,15 @@
 import React, { useState } from "react";
 import { UploadCloud, Target, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { createAssignment } from "../../services/teacherService";
 
 const CLASSES = ["CSE-A", "CSE-B", "ECE-A"];
 
 export default function CreateAssignment() {
   const navigate = useNavigate();
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const [formData, setFormData] = useState({
     className: CLASSES[0],
@@ -21,9 +25,21 @@ export default function CreateAssignment() {
     });
   };
 
-  const handleSubmit = () => {
-    console.log("Assignment Data:", formData);
-    navigate("../dashboard");
+  const handleSubmit = async () => {
+    if (!formData.title.trim()) {
+      setError("Title is required");
+      return;
+    }
+    try {
+      setLoading(true);
+      setError(null);
+      await createAssignment(formData);
+      navigate("../dashboard");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -136,9 +152,14 @@ export default function CreateAssignment() {
 
           <button
             onClick={handleSubmit}
-            className="px-8 py-2.5 rounded-2xl bg-[#065F46] text-white font-semibold hover:bg-[#044D39] transition-all shadow-md"
+            disabled={loading}
+            className={`px-8 py-2.5 rounded-2xl text-white font-semibold transition-all shadow-md ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#065F46] hover:bg-[#044D39]"
+            }`}
           >
-            Deploy Assignment
+            {loading ? "Deploying..." : "Deploy Assignment"}
           </button>
         </div>
       </div>

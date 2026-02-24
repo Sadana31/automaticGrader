@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FileText,
   ThumbsUp,
@@ -10,47 +10,65 @@ import {
 } from "lucide-react";
 import Button from "../../components/Button";
 import ProgressBar from "../../components/ProgressBar";
+import {
+  fetchStudentSubmissions,
+  fetchEvaluation,
+  raiseQuery,
+} from "../../services/studentService";
 
 export default function EvaluationsPage() {
   const [issueCount, setIssueCount] = useState(1);
 
-  const [essays, setEssays] = useState([
-    {
-      id: 1,
-      title: "Impact of IoT on Smart Energy",
-      type: "Research Draft",
-      date: "Feb 18, 2026",
-      score: 87,
-      status: "Evaluated",
-      metrics: {
-        research: 90,
-        structure: 82,
-        grammar: 88,
-      },
-      feedback: {
-        strengths: [
-          "Excellent technical depth and domain understanding.",
-          "Strong real-world examples included.",
-        ],
-        weaknesses: [
-          "Minor formatting inconsistencies.",
-          "Conclusion could be more impactful.",
-        ],
-        improvements: [
-          "Expand literature comparison section.",
-          "Add statistical validation for claims.",
-        ],
-        remarks:
-          "Very promising research direction. With minor refinements, this can become publication-ready.",
-      },
-      issue: {
-        raised: false,
-        status: null,
-        text: "",
-        response: "",
-      },
-    },
-  ]);
+  const [essays, setEssays] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadEvaluations = async () => {
+      setLoading(true);
+
+      const submissions = await fetchStudentSubmissions();
+
+      const evaluated = await Promise.all(
+        submissions.map(async (sub) => {
+          const evalData = await fetchEvaluation(sub.id);
+
+          if (!evalData) return null;
+
+          return {
+            id: sub.id,
+            title: sub.title,
+            type: sub.type,
+            date: new Date(
+              evalData.createdAt?.seconds * 1000
+            ).toLocaleDateString(),
+            score: evalData.finalGrade || evalData.score || 0,
+            status: "Evaluated",
+            metrics: evalData.metrics || {
+              research: 0,
+              structure: 0,
+              grammar: 0,
+            },
+            feedback: evalData.feedback || {
+              strengths: [],
+              weaknesses: [],
+              improvements: [],
+              remarks: "",
+            },
+            issue: {
+              raised: false,
+              status: null,
+              text: "",
+            },
+          };
+        })
+      );
+
+      setEssays(evaluated.filter(Boolean));
+      setLoading(false);
+    };
+
+    loadEvaluations();
+  }, []);
 
   const [selectedId, setSelectedId] = useState(
     essays.find((e) => e.status === "Evaluated")?.id || null,
@@ -60,6 +78,14 @@ export default function EvaluationsPage() {
 
   const essay = essays.find((e) => e.id === selectedId);
   const evaluatedEssays = essays.filter((e) => e.status === "Evaluated");
+
+  if (loading) {
+    return (
+      <div className="text-center py-20 font-bold text-gray-500">
+        Loading evaluations...
+      </div>
+    );
+  }
 
   if (evaluatedEssays.length === 0) {
     return (
@@ -83,22 +109,28 @@ export default function EvaluationsPage() {
     );
   };
 
-  const handleRaiseIssue = () => {
+  const handleRaiseIssue = async () => {
     if (!issueText.trim() || issueCount >= 5) return;
 
-    const updatedEssay = {
-      ...essay,
-      issue: {
-        raised: true,
-        status: "pending",
-        text: issueText,
-        response: "",
-      },
-    };
+    try {
+      await raiseQuery(essay.id, issueText);
 
-    updateEssay(updatedEssay);
-    setIssueCount((prev) => prev + 1);
-    setIssueText("");
+      setIssueCount((prev) => prev + 1);
+
+      const updatedEssay = {
+        ...essay,
+        issue: {
+          raised: true,
+          status: "pending",
+          text: issueText,
+        },
+      };
+
+      updateEssay(updatedEssay);
+      setIssueText("");
+    } catch (err) {
+      alert("Failed to raise query.");
+    }
   };
 
   const handleResolveIssue = () => {

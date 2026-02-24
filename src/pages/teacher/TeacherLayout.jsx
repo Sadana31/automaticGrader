@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { fetchCurrentTeacher } from "../../services/teacherService";
+import { signOut } from "firebase/auth";
+import { auth } from "../../services/firebase";
 
 export default function TeacherLayout() {
   const navigate = useNavigate();
@@ -21,6 +23,11 @@ export default function TeacherLayout() {
     };
     fetchTeacher();
   }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
 
   const NavItem = ({ to, icon: Icon, label }) => (
     <NavLink
@@ -74,7 +81,7 @@ export default function TeacherLayout() {
           </div>
 
           <button
-            onClick={() => navigate("/")}
+            onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-red-600 hover:bg-red-50 transition-colors font-bold"
           >
             <LogOut className="w-5 h-5" />

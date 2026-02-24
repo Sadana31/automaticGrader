@@ -10,6 +10,8 @@ import {
   LogOut,
 } from "lucide-react";
 import { fetchCurrentStudent } from "../../services/studentService";
+import { signOut } from "firebase/auth";
+import { auth } from "../../services/firebase";
 
 export default function StudentLayout() {
   const navigate = useNavigate();
@@ -22,6 +24,11 @@ export default function StudentLayout() {
     };
     fetchStudent();
   }, []);
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
 
   const NavItem = ({ to, icon: Icon, label }) => (
     <NavLink
@@ -89,12 +96,12 @@ export default function StudentLayout() {
                 {student?.name || "Loading..."}
               </p>
               <p className="text-xs text-[#0F4C81] font-bold">
-                {student?.roll || "Student"}
+                {student?.role || "Loading..."}
               </p>
             </div>
           </div>
           <button
-            onClick={() => navigate("/")}
+            onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-red-600 hover:bg-red-50 transition-colors font-bold"
           >
             <LogOut className="w-5 h-5" />

@@ -1,41 +1,75 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Save } from "lucide-react";
+import {
+  fetchSubmissionById,
+  fetchEvaluationBySubmission,
+  updateFinalGrade,
+} from "../../services/teacherService";
 
 export default function ReviewEssay() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const mockSubmissions = {
-    1: {
-      name: "Anand",
-      roll: "21CSE001",
-      aiGrade: 85,
-      aiFeedback:
-        "Strong technical depth. Improve transitions between sections and expand the conclusion with real-world implications.",
-      finalGrade: 85,
-    },
-    2: {
-      name: "Riya",
-      roll: "21CSE002",
-      aiGrade: 78,
-      aiFeedback:
-        "Good structure overall. Minor grammar errors and formatting inconsistencies detected.",
-      finalGrade: 78,
-    },
-  };
+  const [submission, setSubmission] = useState(null);
+  const [evaluation, setEvaluation] = useState(null);
+  const [grade, setGrade] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const submission = mockSubmissions[id];
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const sub = await fetchSubmissionById(id);
+        if (!sub) {
+          setLoading(false);
+          return;
+        }
 
-  const [grade, setGrade] = useState(submission?.finalGrade || 0);
+        const evalData = await fetchEvaluationBySubmission(id);
 
-  if (!submission) {
+        setSubmission(sub);
+        setEvaluation(evalData);
+        setGrade(evalData?.finalGrade || evalData?.score || 0);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="text-center py-20">
+        <p className="text-gray-500 font-bold">Loading submission...</p>
+      </div>
+    );
+  }
+
+  if (!submission || !evaluation) {
     return (
       <div className="text-center py-20">
         <p className="text-gray-500 font-bold">Submission not found.</p>
       </div>
     );
   }
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      await updateFinalGrade(evaluation.id, grade);
+      alert("Grade updated successfully!");
+      navigate(-1);
+    } catch (error) {
+      console.error(error);
+      alert("Error updating grade.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -44,7 +78,7 @@ export default function ReviewEssay() {
           Review Submission
         </h2>
         <p className="text-gray-500 font-semibold mt-1">
-          {submission.name} • {submission.roll}
+          Student ID: {submission.studentId}
         </p>
       </div>
 
@@ -54,7 +88,7 @@ export default function ReviewEssay() {
             AI Evaluation
           </p>
           <p className="text-gray-700 leading-relaxed">
-            {submission.aiFeedback}
+            {evaluation.feedback?.remarks || "No feedback available."}
           </p>
         </div>
 
@@ -63,7 +97,7 @@ export default function ReviewEssay() {
             AI Suggested Grade
           </p>
           <p className="text-2xl font-black text-[#065F46]">
-            {submission.aiGrade}
+            {evaluation.score}
           </p>
         </div>
       </div>
@@ -82,14 +116,12 @@ export default function ReviewEssay() {
         </div>
 
         <button
-          onClick={() => {
-            alert("Grade updated!");
-            navigate(-1);
-          }}
-          className="w-full py-4 bg-[#065F46] text-white rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-[#044D39]"
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full py-4 bg-[#065F46] text-white rounded-2xl font-semibold flex items-center justify-center gap-2 hover:bg-[#044D39] disabled:opacity-60"
         >
           <Save className="w-5 h-5" />
-          Save Changes
+          {saving ? "Saving..." : "Save Changes"}
         </button>
       </div>
     </div>

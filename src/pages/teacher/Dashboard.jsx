@@ -36,7 +36,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             onClick={() => navigate("../submissions")}
             className="group p-6 bg-white rounded-3xl border border-gray-100 hover:border-emerald-200 transition-all text-left shadow-sm"
@@ -98,7 +98,7 @@ export default function Dashboard() {
           </button>
         </div>
 
-        <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
+        {/* <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm">
           <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
             <Calendar className="w-6 h-6 text-green-600" />
             Quick Access
@@ -118,7 +118,7 @@ export default function Dashboard() {
               </button>
             ))}
           </div>
-        </div>
+        </div> */}
       </div>
     </div>
   );

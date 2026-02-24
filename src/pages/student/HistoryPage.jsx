@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FileText,
   CheckCircle,
@@ -6,28 +6,21 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { fetchStudentSubmissions } from "../../services/studentService";
 
 export default function HistoryPage() {
   const navigate = useNavigate();
 
-  const [essays] = useState([
-    {
-      id: 1,
-      title: "Impact of IoT on Smart Energy",
-      type: "Research Draft",
-      date: "Feb 18, 2026",
-      status: "Evaluated",
-      score: 87,
-    },
-    {
-      id: 2,
-      title: "Smart Grid Security Analysis",
-      type: "Descriptive Essay",
-      date: "Feb 22, 2026",
-      status: "Pending",
-      score: "--",
-    },
-  ]);
+  const [essays, setEssays] = useState([]);
+
+  useEffect(() => {
+    const loadSubmissions = async () => {
+      const data = await fetchStudentSubmissions();
+      setEssays(data);
+    };
+
+    loadSubmissions();
+  }, []);
 
   const getStatusBadge = (status) => {
     switch (status) {

@@ -1,33 +1,69 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Lock } from "lucide-react";
+import { auth } from "../../services/firebase";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { db } from "../../services/firebase";
 
 export default function StudentProfilePage() {
-  const [formData, setFormData] = useState({
-    name: "Sample Student Name",
-    email: "student@gmail.com",
-    phone: "+91 XXXXXXXXXX",
-    role: "Student",
-    bio: "Focusing on Causal-Fuzzy logic, IoT, and Smart Energy forecasting.",
-    college: "VIT Chennai",
-  });
+  const [formData, setFormData] = useState(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
+  useEffect(() => {
+    const loadProfile = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (!snap.exists()) return;
+      const data = snap.data();
+      setFormData({
+        name: data.name || "",
+        email: user.email || "",
+        phone: data.phone || "",
+        role: data.role || "Student",
+        bio: data.bio || "",
+        college: data.college || "",
+      });
+    };
+    loadProfile();
+  }, []);
+
   const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setIsSaving(true);
 
-    setTimeout(() => {
-      setIsSaving(false);
+    const user = auth.currentUser;
+    if (!user) return;
+
+    try {
+      setIsSaving(true);
+
+      await updateDoc(doc(db, "users", user.uid), {
+        name: formData.name,
+        phone: formData.phone,
+        bio: formData.bio,
+        college: formData.college,
+      });
+
       setShowSuccess(true);
-
       setTimeout(() => setShowSuccess(false), 3000);
-    }, 1000);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (!formData) {
+    return (
+      <div className="text-center py-20 font-bold text-gray-500">
+        Loading profile...
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">

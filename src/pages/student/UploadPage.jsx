@@ -6,6 +6,7 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { submitAssignment } from "../../services/studentService";
 
 export default function UploadPage() {
   const navigate = useNavigate();
@@ -28,14 +29,29 @@ export default function UploadPage() {
       setFile(e.dataTransfer.files[0]);
     }
   };
-  const handleUpload = () => {
-    if (!file) return;
+
+  const handleUpload = async () => {
+    if (!assignmentId) {
+      alert("Invalid assignment.");
+      return;
+    }
+
+    if (!title.trim()) {
+      alert("Please enter a document title.");
+      return;
+    }
     setIsUploading(true);
-    setTimeout(() => {
-      setIsUploading(false);
-      setFile(null);
+    try {
+      await submitAssignment({
+        assignmentId,
+        title,
+        type,
+      });
       navigate("/student/history");
-    }, 1800);
+    } catch (err) {
+      alert(err.message);
+    }
+    setIsUploading(false);
   };
 
   return (
@@ -138,9 +154,9 @@ export default function UploadPage() {
         <div className="mt-8 flex justify-end">
           <button
             onClick={handleUpload}
-            disabled={!file || isUploading}
+            disabled={isUploading}
             className={`flex items-center gap-2 bg-[#0F4C81] text-white px-8 py-3 rounded-2xl font-bold transition-all ${
-              !file || isUploading
+              isUploading
                 ? "opacity-50 cursor-not-allowed"
                 : "hover:shadow-lg"
             }`}

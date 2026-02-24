@@ -31,10 +31,13 @@ export default function ProfilePage() {
     try {
       setSaving(true);
       const user = auth.currentUser;
-      const teacherRef = doc(db, "teachers", user.uid);
+
+      const teacherRef = doc(db, "users", user.uid);
+
       await updateDoc(teacherRef, {
         name: teacher.name,
       });
+
       alert("Profile updated successfully!");
     } catch (error) {
       console.error(error);
