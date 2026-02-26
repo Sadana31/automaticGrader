@@ -15,51 +15,80 @@ export default function AuthPage() {
   const navigate = useNavigate();
 
   const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const isTeacher = role === "teacher";
 
+  const getFriendlyError = (code) => {
+    switch (code) {
+      case "auth/user-not-found":
+        return "User does not exist.";
+      case "auth/wrong-password":
+        return "Incorrect password.";
+      case "auth/email-already-in-use":
+        return "Email already registered.";
+      case "auth/weak-password":
+        return "Password should be at least 6 characters.";
+      case "auth/invalid-email":
+        return "Invalid email address.";
+      case "auth/invalid-credential":
+        return "Invalid email or password.";
+      default:
+        return "Something went wrong. Please try again.";
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
+
     try {
       if (isLogin) {
         const userCredential = await signInWithEmailAndPassword(
           auth,
           email,
-          password,
+          password
         );
+
         const docRef = doc(db, "users", userCredential.user.uid);
         const docSnap = await getDoc(docRef);
-        const storedRole = docSnap.data()?.role;
-        if (storedRole !== role) {
-          alert("No user with such a role.");
+
+        if (!docSnap.exists()) {
+          setError("User record not found.");
           await auth.signOut();
           return;
         }
-        if (storedRole === "teacher") {
-          navigate("/teacher");
-        } else {
-          navigate("/student");
+
+        const storedRole = docSnap.data()?.role;
+
+        if (storedRole !== role) {
+          setError("No user found with this role.");
+          await auth.signOut();
+          return;
         }
+
+        navigate(storedRole === "teacher" ? "/teacher" : "/student");
       } else {
         const userCredential = await createUserWithEmailAndPassword(
           auth,
           email,
-          password,
+          password
         );
+
         await setDoc(doc(db, "users", userCredential.user.uid), {
-          email: email,
-          role: role,
+          name,
+          email,
+          role,
+          createdAt: new Date(),
         });
-        if (role === "teacher") {
-          navigate("/teacher");
-        } else {
-          navigate("/student");
-        }
+
+        navigate(role === "teacher" ? "/teacher" : "/student");
       }
     } catch (err) {
-      alert(err.message);
+      setError(getFriendlyError(err.code));
     }
   };
 
@@ -69,20 +98,20 @@ export default function AuthPage() {
         isTeacher ? "bg-[#F0FDF4]" : "bg-[#F8FAFC]"
       }`}
     >
-      <div className="max-w-4xl w-full bg-white rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] overflow-hidden flex flex-col md:flex-row min-h-[550px] border border-gray-100">
+      <div className="max-w-4xl w-full bg-white rounded-[2rem] shadow-lg flex flex-col md:flex-row min-h-[550px] border border-gray-100">
         <div className="w-full md:w-1/2 p-10 flex flex-col justify-center">
           <div className="mb-8">
-            <h1 className="text-3xl font-extrabold text-gray-900 mb-2 tracking-tight">
+            <h1 className="text-3xl font-extrabold text-gray-900 mb-2">
               {isLogin
                 ? isTeacher
                   ? "Teacher Portal"
                   : "Welcome Back!"
                 : isTeacher
-                  ? "Faculty Registration"
-                  : "Create an Account"}
+                ? "Faculty Registration"
+                : "Create an Account"}
             </h1>
 
-            <p className="text-gray-500 font-medium">
+            <p className="text-gray-500">
               {isTeacher
                 ? "Access your classes and AI evaluation tools."
                 : "Login to view your essay evaluations."}
@@ -99,6 +128,8 @@ export default function AuthPage() {
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     placeholder="Your Name"
                     className="w-full pl-11 pr-4 py-3.5 rounded-2xl border border-gray-200 bg-gray-50 outline-none"
                     required
@@ -141,6 +172,12 @@ export default function AuthPage() {
               </div>
             </div>
 
+            {error && (
+              <p className="text-sm text-red-500 font-medium -mt-2">
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
               className={`w-full py-4 text-lg rounded-2xl font-bold transition ${
@@ -153,10 +190,13 @@ export default function AuthPage() {
             </button>
           </form>
 
-          <p className="mt-8 text-center text-gray-500 font-medium">
+          <p className="mt-8 text-center text-gray-500">
             {isLogin ? "Don't have an account? " : "Already have an account? "}
             <button
-              onClick={() => setIsLogin(!isLogin)}
+              onClick={() => {
+                setIsLogin(!isLogin);
+                setError("");
+              }}
               className={`font-bold hover:underline ${
                 isTeacher ? "text-[#065F46]" : "text-[#0F4C81]"
               }`}
@@ -167,7 +207,7 @@ export default function AuthPage() {
         </div>
 
         <div
-          className={`w-full md:w-1/2 p-12 text-white hidden md:flex flex-col justify-between relative overflow-hidden ${
+          className={`w-full md:w-1/2 p-12 text-white hidden md:flex flex-col justify-between relative rounded-tr-[2rem] rounded-br-[2rem] overflow-hidden ${
             isTeacher
               ? "bg-gradient-to-br from-[#065F46] via-[#047857] to-[#064E3B]"
               : "bg-gradient-to-br from-[#0F4C81] via-[#1A365D] to-[#0A2240]"
@@ -197,6 +237,7 @@ export default function AuthPage() {
             </p>
           </div>
         </div>
+
       </div>
     </div>
   );
