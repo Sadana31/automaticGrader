@@ -14,6 +14,7 @@ import {
   fetchStudentSubmissions,
   fetchEvaluation,
   raiseQuery,
+  fetchAssignmentById,
 } from "../../services/studentService";
 
 export default function EvaluationsPage() {
@@ -30,30 +31,40 @@ export default function EvaluationsPage() {
 
       const evaluated = await Promise.all(
         submissions.map(async (sub) => {
-          const evalData = await fetchEvaluation(sub.id);
 
+          const evalData = await fetchEvaluation(sub.id);
           if (!evalData) return null;
+
+          const assignment = await fetchAssignmentById(sub.assignmentId);
 
           return {
             id: sub.id,
             title: sub.title,
             type: sub.type,
+            assignmentTitle: assignment?.title || "",
+            instructions: assignment?.instructions || "",
+            maxScore: assignment?.maxScore || 100,
+
             date: new Date(
               evalData.createdAt?.seconds * 1000
             ).toLocaleDateString(),
+
             score: evalData.finalGrade || evalData.score || 0,
             status: "Evaluated",
-            metrics: evalData.metrics || {
-              research: 0,
-              structure: 0,
-              grammar: 0,
+
+            metrics: {
+              research: 80,
+              structure: 75,
+              grammar: 70,
             },
-            feedback: evalData.feedback || {
-              strengths: [],
-              weaknesses: [],
-              improvements: [],
-              remarks: "",
+
+            feedback: {
+              strengths: evalData.strengths || [],
+              weaknesses: evalData.areas_for_improvement || [],
+              improvements: evalData.specific_revision_suggestions || [],
+              remarks: evalData.evaluation_summary || "",
             },
+
             issue: {
               raised: false,
               status: null,
@@ -70,9 +81,13 @@ export default function EvaluationsPage() {
     loadEvaluations();
   }, []);
 
-  const [selectedId, setSelectedId] = useState(
-    essays.find((e) => e.status === "Evaluated")?.id || null,
-  );
+  useEffect(() => {
+    if (essays.length > 0 && !selectedId) {
+      setSelectedId(essays[0].id);
+    }
+  }, [essays]);
+
+  const [selectedId, setSelectedId] = useState(null);
 
   const [issueText, setIssueText] = useState("");
 
@@ -214,11 +229,24 @@ export default function EvaluationsPage() {
               {essay.title}
             </h2>
 
+            <p className="text-gray-600 font-medium mb-2">
+              Assignment: {essay.assignmentTitle}
+            </p>
+
+            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
+              <h4 className="font-bold text-sm text-gray-500 uppercase mb-2">
+                Assignment Instructions
+              </h4>
+              <p className="text-sm text-gray-700 whitespace-pre-line">
+                {essay.instructions}
+              </p>
+            </div>
+
             <p className="text-gray-500 font-medium mb-8">
               Evaluated on {essay.date}
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-8">
               <div className="flex items-center gap-6">
                 <div className="w-28 h-28 rounded-full border-8 border-[#0F4C81] flex items-center justify-center bg-[#F8FAFC]">
                   <span className="text-4xl font-black text-[#0F4C81]">
@@ -231,27 +259,15 @@ export default function EvaluationsPage() {
                     Final Score
                   </p>
                   <p className="text-lg font-bold text-gray-900">
-                    Excellent Work
+                    {
+                      essay.score >= 90 ? "Excellent" : 
+                      essay.score >= 80 ? "Good" : 
+                      essay.score >= 70 ? "Average" : 
+                      essay.score >= 60 ? "Below Average" : 
+                      "Need Improvement"
+                    }
                   </p>
                 </div>
-              </div>
-
-              <div className="flex flex-col justify-center">
-                <ProgressBar
-                  label="Research & Depth"
-                  value={essay.metrics.research}
-                  colorClass="bg-[#0F4C81]"
-                />
-                <ProgressBar
-                  label="Structure & Flow"
-                  value={essay.metrics.structure}
-                  colorClass="bg-[#009B77]"
-                />
-                <ProgressBar
-                  label="Clarity & Grammar"
-                  value={essay.metrics.grammar}
-                  colorClass="bg-[#E65100]"
-                />
               </div>
             </div>
           </div>
@@ -327,7 +343,7 @@ export default function EvaluationsPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-[2rem] p-7 border border-[#E2E8F0] shadow-sm mt-8">
+          {/* <div className="bg-white rounded-[2rem] p-7 border border-[#E2E8F0] shadow-sm mt-8">
             <div className="flex items-center gap-2 mb-4">
               <MessageSquareWarning className="w-6 h-6 text-amber-500" />
               <h3 className="text-lg font-extrabold text-gray-900">
@@ -386,7 +402,7 @@ export default function EvaluationsPage() {
                 </p>
               </div>
             )}
-          </div>
+          </div> */}
         </div>
       )}
     </div>

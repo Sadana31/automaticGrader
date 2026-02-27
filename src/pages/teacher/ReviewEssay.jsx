@@ -6,6 +6,7 @@ import {
   fetchEvaluationBySubmission,
   updateFinalGrade,
 } from "../../services/teacherService";
+import { supabase } from "../../services/supabase";
 
 export default function ReviewEssay() {
   const { id } = useParams();
@@ -82,14 +83,77 @@ export default function ReviewEssay() {
         </p>
       </div>
 
+<div className="mt-4">
+  <button
+    onClick={async () => {
+      const { data, error } = await supabase.storage
+        .from("submissions")
+        .createSignedUrl(submission.filePath, 300); 
+
+      if (error) {
+        console.error(error);
+        alert("Failed to generate download link.");
+        return;
+      }
+
+      window.open(data.signedUrl, "_blank");
+    }}
+    className="px-5 py-2 bg-[#0F4C81] text-white rounded-xl font-semibold hover:opacity-90 transition"
+  >
+    Download Submitted File
+  </button>
+</div>
+
       <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6">
         <div>
-          <p className="font-black text-[#065F46] uppercase text-xs tracking-widest mb-2">
+          <p className="font-black text-[#065F46] uppercase text-xs tracking-widest mb-4">
             AI Evaluation
           </p>
-          <p className="text-gray-700 leading-relaxed">
-            {evaluation.feedback?.remarks || "No feedback available."}
-          </p>
+          <div className="space-y-6">
+              <div>
+                <h4 className="font-bold text-gray-800 mb-2">Summary</h4>
+                <p className="text-gray-700 leading-relaxed">
+                  {evaluation.evaluation_summary}
+                </p>
+              </div>
+
+              {evaluation.strengths?.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-green-600 mb-2">Strengths</h4>
+                  <ul className="list-disc list-inside text-gray-700 space-y-1">
+                    {evaluation.strengths.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {evaluation.areas_for_improvement?.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-red-500 mb-2">
+                    Areas for Improvement
+                  </h4>
+                  <ul className="list-disc list-inside text-gray-700 space-y-1">
+                    {evaluation.areas_for_improvement.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {evaluation.specific_revision_suggestions?.length > 0 && (
+                <div>
+                  <h4 className="font-bold text-blue-600 mb-2">
+                    Revision Suggestions
+                  </h4>
+                  <ul className="list-disc list-inside text-gray-700 space-y-1">
+                    {evaluation.specific_revision_suggestions.map((item, index) => (
+                      <li key={index}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+        </div>
         </div>
 
         <div>
