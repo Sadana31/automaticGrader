@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   UploadCloud,
   CheckCircle,
@@ -6,17 +6,21 @@ import {
   X,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { submitAssignment } from "../../services/studentService";
+import { submitAssignment, fetchAssignmentById } from "../../services/studentService";
+import { supabase } from "../../services/supabase";
 
 export default function UploadPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const assignmentId = searchParams.get("assignment");
+  const [assignment, setAssignment] = useState(null);
+  const [loadingAssignment, setLoadingAssignment] = useState(true);
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [title, setTitle] = useState("");
   const [type, setType] = useState("Descriptive Essay");
+  const [error, setError] = useState(null);
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
@@ -25,19 +29,48 @@ export default function UploadPage() {
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
+
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
+      const selectedFile = e.dataTransfer.files[0];
+
+      if (validateFile(selectedFile)) {
+        setFile(selectedFile);
+      }
     }
   };
 
-  const handleUpload = async () => {
-    if (!assignmentId) {
-      alert("Invalid assignment.");
-      return;
+  const validateFile = (selectedFile) => {
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    if (!allowedTypes.includes(selectedFile.type)) {
+      alert("Only PDF or Word documents are allowed.");
+      return false;
     }
 
+    if (selectedFile.size > 5 * 1024 * 1024) {
+      alert("File must be under 5MB.");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleUpload = async () => {
+    if (isUploading) return;
+    if (!assignmentId) {
+      setError("No assignment selected. Please go back and choose an assignment.");
+      return;
+    }
     if (!title.trim()) {
-      alert("Please enter a document title.");
+      setError("Please enter a title for your submission.");
+      return;
+    }
+    if (!file) {
+      setError("Please upload a file.");
       return;
     }
     setIsUploading(true);
@@ -46,13 +79,44 @@ export default function UploadPage() {
         assignmentId,
         title,
         type,
+        file,
       });
       navigate("/student/history");
     } catch (err) {
-      alert(err.message);
+      setError(err.message || "Failed to submit assignment. Please try again.");
     }
     setIsUploading(false);
   };
+
+  const handleDownload = async () => {
+    if (!assignment?.filePath) return;
+
+    const { data, error } = await supabase.storage
+      .from("assignments")
+      .createSignedUrl(assignment.filePath, 60);
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    window.open(data.signedUrl, "_blank");
+  };
+
+  useEffect(() => {
+    const loadAssignment = async () => {
+      if (!assignmentId) {
+        setLoadingAssignment(false);
+        return;
+      }
+
+      const data = await fetchAssignmentById(assignmentId);
+      setAssignment(data);
+      setLoadingAssignment(false);
+    };
+
+    loadAssignment();
+  }, [assignmentId]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -64,6 +128,69 @@ export default function UploadPage() {
           Upload your essay, report, or draft for AI-powered evaluation.
         </p>
       </div>
+      {loadingAssignment ? (
+        <div className="text-center py-10 text-gray-500 font-semibold">
+          Loading assignment details...
+        </div>
+      ) : assignment ? (
+        <div className="bg-indigo-50 border border-indigo-100 rounded-3xl p-6 mb-8 space-y-4">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-extrabold text-[#0F4C81]">
+              {assignment.title}
+            </h3>
+
+            <span className="text-xs font-bold px-3 py-1 rounded-xl uppercase tracking-wide bg-green-100 text-green-700">
+              {assignment.status}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm font-medium text-gray-700">
+            <div>
+              <span className="font-bold text-gray-900">Class:</span>{" "}
+              {assignment.className}
+            </div>
+            <div>
+              <span className="font-bold text-gray-900">Max Score:</span>{" "}
+              {assignment.maxScore}
+            </div>
+            <div>
+              <span className="font-bold text-gray-900">Created:</span>{" "}
+              {assignment.createdAt?.toDate
+                ? assignment.createdAt.toDate().toLocaleDateString()
+                : "N/A"}
+            </div>
+          </div>
+
+          <div>
+            <p className="font-bold text-gray-900 mb-1">Instructions</p>
+            <p className="text-gray-600 whitespace-pre-line">
+              {assignment.instructions}
+            </p>
+          </div>
+
+          <div>
+            <p className="font-bold text-gray-900 mb-1">Grading Rubric</p>
+            <p className="text-gray-600 whitespace-pre-line">
+              {assignment.rubric}
+            </p>
+          </div>
+
+          {assignment.fileUrl && (
+            <div className="pt-2">
+              <button
+                onClick={handleDownload}
+                className="inline-flex items-center gap-2 bg-[#0F4C81] text-white px-4 py-2 rounded-xl font-bold hover:shadow-md transition-all"
+              >
+                Download Assignment File
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-red-50 text-red-600 p-4 rounded-2xl font-semibold">
+          Assignment not found.
+        </div>
+      )}
       <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 p-6 md:p-8">
         {assignmentId && (
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6">
@@ -140,17 +267,27 @@ export default function UploadPage() {
                 Drag & drop your document
               </p>
               <p className="text-sm text-gray-500 font-medium">
-                Supports PDF, DOCX (Max 20MB)
+                Supports PDF, DOCX (Max 5MB)
               </p>
             </div>
           )}
           <input
             type="file"
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onChange={(e) => setFile(e.target.files[0])}
+            onChange={(e) => {
+              const selectedFile = e.target.files[0];
+              if (selectedFile && validateFile(selectedFile)) {
+                setFile(selectedFile);
+              }
+            }}
             disabled={!!file}
           />
         </div>
+        {error && (
+          <div className="my-4 bg-red-50 text-red-600 p-3 rounded-xl text-sm font-semibold">
+            {error}
+          </div>
+        )}
         <div className="mt-8 flex justify-end">
           <button
             onClick={handleUpload}

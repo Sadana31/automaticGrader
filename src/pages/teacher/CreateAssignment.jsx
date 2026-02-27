@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { UploadCloud, Target, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createAssignment } from "../../services/teacherService";
+import { upload } from "@testing-library/user-event/dist/upload";
 
 const CLASSES = ["CSE-A", "CSE-B", "ECE-A"];
 
@@ -11,11 +12,15 @@ export default function CreateAssignment() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const [file, setFile] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+
   const [formData, setFormData] = useState({
     className: CLASSES[0],
     maxScore: 100,
     title: "",
     instructions: "",
+    rubric: "",
   });
 
   const handleChange = (e) => {
@@ -26,19 +31,45 @@ export default function CreateAssignment() {
   };
 
   const handleSubmit = async () => {
+    if(loading) return;
+    if(isUploading) return;
     if (!formData.title.trim()) {
       setError("Title is required");
       return;
     }
+
+    if (!formData.instructions.trim()) {
+      setError("Instructions are required");
+      return;
+    }
+    if (!formData.rubric.trim()) {
+      setError("Grading rubric is required");
+      return;
+    }
+    if (file) {
+      if (file.type !== "application/pdf") {
+        setError("Only PDF files are allowed");
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError("File must be under 5MB");
+        return;
+      }
+    }
+    setIsUploading(true);
     try {
       setLoading(true);
       setError(null);
-      await createAssignment(formData);
+      await createAssignment({
+        ...formData,
+        file,
+      });
       navigate("../dashboard");
     } catch (err) {
       setError(err.message);
     } finally {
       setLoading(false);
+      setIsUploading(false);
     }
   };
 
@@ -116,31 +147,56 @@ export default function CreateAssignment() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-black uppercase tracking-widest text-gray-400 ml-1">
+            Grading Rubric
+          </label>
+          <textarea
+            name="rubric"
+            value={formData.rubric}
+            onChange={handleChange}
+            placeholder="Define grading criteria (Research quality, Structure, Grammar weightage, etc.)"
+            className="w-full p-4 rounded-2xl border border-gray-200 bg-gray-50 font-medium outline-none focus:ring-2 focus:ring-purple-600 min-h-[160px]"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-bold text-emerald-700">
-              Handouts (Students)
+              Handouts (PDF only, max 5MB)
             </label>
-            <div className="border-2 border-dashed border-emerald-100 rounded-3xl p-8 text-center bg-emerald-50/20 hover:bg-emerald-50/50 transition-colors cursor-pointer group">
+
+            <input
+              id="handout-upload"
+              type="file"
+              accept="application/pdf"
+              onChange={(e) => setFile(e.target.files[0])}
+              className="hidden"
+            />
+
+            <label
+              htmlFor="handout-upload"
+              className="block border-2 border-dashed border-emerald-100 rounded-3xl p-8 text-center bg-emerald-50/20 hover:bg-emerald-50/50 transition-colors cursor-pointer group"
+            >
               <UploadCloud className="w-8 h-8 text-emerald-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
               <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
                 Upload Materials
               </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-purple-700">
-              Grading Rubric (AI)
             </label>
-            <div className="border-2 border-dashed border-purple-100 rounded-3xl p-8 text-center bg-purple-50/20 hover:bg-purple-50/50 transition-colors cursor-pointer group">
-              <Target className="w-8 h-8 text-purple-600 mx-auto mb-2 group-hover:scale-110 transition-transform" />
-              <p className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">
-                Upload Benchmark
+
+            {file && (
+              <p className="text-xs text-gray-600 mt-1">
+                Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
               </p>
-            </div>
+            )}
           </div>
         </div>
+
+        {error && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm font-semibold">
+            {error}
+          </div>
+        )}
 
         <div className="pt-4 flex justify-end gap-3">
           <button

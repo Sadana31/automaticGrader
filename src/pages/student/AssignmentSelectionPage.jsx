@@ -7,6 +7,7 @@ export default function AssignmentSelectionPage() {
   const navigate = useNavigate();
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
+  
 
   useEffect(() => {
     const loadAssignments = async () => {
@@ -46,7 +47,7 @@ export default function AssignmentSelectionPage() {
             >
               <div className="flex justify-between items-center mb-4">
                 <span className="text-xs font-bold px-3 py-1 rounded-xl uppercase tracking-wide bg-green-100 text-green-700">
-                  {assignment.status}
+                  {assignment.status || "Open"}
                 </span>
 
                 <span className="text-xs font-bold text-gray-400">

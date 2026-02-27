@@ -11,8 +11,8 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { db, auth, storage } from "./firebase";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db, auth } from "./firebase";
+import { supabase } from "./supabase";
 
 export const fetchCurrentStudent = async () => {
   const user = auth.currentUser;
@@ -36,7 +36,6 @@ export const fetchAssignments = async () => {
   const q = query(
     collection(db, "assignments"),
     where("className", "==", studentData.className || "CSE-A"),
-    where("status", "==", "open")
   );
 
   const snapshot = await getDocs(q);
@@ -47,24 +46,64 @@ export const fetchAssignments = async () => {
   }));
 };
 
+export const fetchAssignmentById = async (assignmentId) => {
+  const docRef = doc(db, "assignments", assignmentId);
+  const docSnap = await getDoc(docRef);
+
+  if (!docSnap.exists()) return null;
+
+  return {
+    id: docSnap.id,
+    ...docSnap.data(),
+  };
+};
+
 export const submitAssignment = async ({
   assignmentId,
   title,
   type,
+  file,
 }) => {
   const user = auth.currentUser;
   if (!user) throw new Error("Not authenticated");
 
-  if (!assignmentId) throw new Error("Invalid assignment");
+  if (!file) throw new Error("Please upload a document");
 
-  await addDoc(collection(db, "submissions"), {
-    assignmentId,
-    studentId: user.uid,
-    title: title || "Untitled Submission",
-    type,
-    status: "pending",
-    createdAt: serverTimestamp(),
-  });
+  if (
+    file.type !== "application/pdf" &&
+    file.type !==
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" &&
+    file.type !== "application/msword"
+  ) {
+    throw new Error("Only PDF or Word documents are allowed");
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("File must be under 5MB");
+  }
+
+  let filePath = `student-${user.uid}/${Date.now()}-${file.name}`;
+
+  try {
+    const { error } = await supabase.storage
+      .from("submissions")
+      .upload(filePath, file, { upsert: false });
+
+    if (error) throw error;
+
+    await addDoc(collection(db, "submissions"), {
+      assignmentId,
+      studentId: user.uid,
+      title,
+      type,
+      filePath,
+      status: "Pending",
+      createdAt: serverTimestamp(),
+    });
+  } catch (err) {
+    await supabase.storage.from("submissions").remove([filePath]);
+    throw err;
+  }
 };
 
 export const fetchStudentSubmissions = async () => {

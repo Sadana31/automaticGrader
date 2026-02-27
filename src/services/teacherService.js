@@ -12,6 +12,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db, auth } from "./firebase";
+import { supabase } from "./supabase";
 
 export const fetchCurrentTeacher = async () => {
   const user = auth.currentUser;
@@ -31,16 +32,48 @@ export const createAssignment = async ({
   maxScore,
   title,
   instructions,
+  rubric,
+  file,
 }) => {
   const user = auth.currentUser;
   if (!user) throw new Error("Not authenticated");
+
+  let filePath = null;
+  let fileUrl = null;
+
+  if (file) {
+    if (file.type !== "application/pdf") {
+      throw new Error("Only PDF files are allowed");
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("File must be under 5MB");
+    }
+
+    filePath = `teacher-${user.uid}/${Date.now()}-${file.name}`;
+
+    const { error } = await supabase.storage
+      .from("assignments")
+      .upload(filePath, file);
+
+    if (error) throw error;
+
+    const { data } = supabase.storage
+      .from("assignments")
+      .getPublicUrl(filePath);
+
+    fileUrl = data.publicUrl;
+  }
 
   await addDoc(collection(db, "assignments"), {
     className,
     maxScore: Number(maxScore),
     title,
     instructions,
+    rubric,
     teacherId: user.uid,
+    filePath,
+    fileUrl,
     status: "open",
     createdAt: serverTimestamp(),
   });
@@ -48,18 +81,37 @@ export const createAssignment = async ({
 
 export const fetchTeacherSubmissions = async () => {
   const user = auth.currentUser;
+  if (!user) return [];
 
-  const q = query(
-    collection(db, "submissions"),
+  const assignmentQuery = query(
+    collection(db, "assignments"),
     where("teacherId", "==", user.uid)
   );
 
-  const snapshot = await getDocs(q);
+  const assignmentSnap = await getDocs(assignmentQuery);
+  const assignmentIds = assignmentSnap.docs.map(doc => doc.id);
 
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
+  if (assignmentIds.length === 0) return [];
+
+  const submissions = [];
+
+  for (const assignmentId of assignmentIds) {
+    const subQuery = query(
+      collection(db, "submissions"),
+      where("assignmentId", "==", assignmentId)
+    );
+
+    const subSnap = await getDocs(subQuery);
+
+    subSnap.forEach(doc => {
+      submissions.push({
+        id: doc.id,
+        ...doc.data(),
+      });
+    });
+  }
+
+  return submissions;
 };
 
 export const evaluateSubmission = async (
