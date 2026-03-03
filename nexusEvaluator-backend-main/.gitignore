@@ -1,0 +1,7 @@
+nexus-evaluator-firebase-adminsdk-fbsvc-c8ef68884c.json
+.env
+digest.txt
+myenv/
+node_modules/
+old_app.py
+__pycache__/
