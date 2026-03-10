@@ -51,6 +51,8 @@ The evaluation pipeline works as follows:
 7. Results are stored in Firebase.
 8. Students and teachers can view evaluations through the dashboard.
 
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/c7adcbf9-ea50-422d-bfc4-98f1ed7104df" />
+
 ---
 
 ## Project Structure
