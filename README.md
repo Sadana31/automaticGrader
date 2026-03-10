@@ -1,70 +1,238 @@
-# Getting Started with Create React App
+<img width="2266" height="1256" alt="image" src="https://github.com/user-attachments/assets/128ab890-2cbb-4b1c-bfcd-0fd810876a4a" /># Nexus Evaluator
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Nexus Evaluator is an automated assignment evaluation system designed to streamline the grading workflow for teachers and provide faster feedback for students.
 
-## Available Scripts
+The platform allows students to upload handwritten or typed assignments, extracts the text using OCR, evaluates responses using AI, and returns structured feedback and scores.
 
-In the project directory, you can run:
+The system combines modern frontend technologies with AI-powered backend services to automate the evaluation pipeline.
 
-### `npm start`
+---
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Tech Stack
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Frontend
 
-### `npm test`
+* React
+* TailwindCSS
+* React Router
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Backend
 
-### `npm run build`
+* FastAPI (Python)
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### AI & Processing
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+* PyTesseract – Optical Character Recognition (OCR) for extracting text from uploaded assignments
+* Gemini API – AI-powered grading and evaluation
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Cloud & Storage
 
-### `npm run eject`
+* Firebase
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+  * Authentication
+  * Database
+  * User management
+* Supabase
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+  * Assignment file storage
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+---
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## System Architecture
 
-## Learn More
+The evaluation pipeline works as follows:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. Student uploads an assignment through the frontend.
+2. The file is stored in Supabase storage.
+3. Backend retrieves the file.
+4. PyTesseract performs OCR to extract the text from the document.
+5. Extracted content is processed by the Gemini API.
+6. Gemini evaluates the answers and generates structured grading feedback.
+7. Results are stored in Firebase.
+8. Students and teachers can view evaluations through the dashboard.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
+## Project Structure
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### Backend (FastAPI)
 
-### Analyzing the Bundle Size
+```
+app/
+│
+├── api/
+│
+├── core/
+│   ├── config.py
+│   ├── firebase.py
+│   ├── gemini_client.py
+│   └── supabase_client.py
+│
+├── models/
+│   └── schemas.py
+│
+├── services/
+│   ├── auto_grader.py
+│   ├── extraction_service.py
+│   └── grading_service.py
+│
+└── main.py
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+**Key Components**
 
-### Making a Progressive Web App
+* `config.py`
+  Manages environment configuration and API keys.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+* `firebase.py`
+  Handles Firebase authentication and database interactions.
 
-### Advanced Configuration
+* `gemini_client.py`
+  Wrapper for Gemini API communication.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+* `supabase_client.py`
+  Handles file storage operations.
 
-### Deployment
+* `extraction_service.py`
+  Runs OCR using PyTesseract.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+* `grading_service.py`
+  Sends extracted responses to Gemini for grading.
 
-### `npm run build` fails to minify
+* `auto_grader.py`
+  Coordinates the full grading pipeline.
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+---
+
+### Frontend (React)
+
+```
+src/
+│
+├── app/
+│   ├── App.jsx
+│   └── routes.jsx
+│
+├── components/
+│   ├── layout/
+│   ├── Button.jsx
+│   └── ProgressBar.jsx
+│
+├── pages/
+│   ├── public/
+│   ├── student/
+│   └── teacher/
+│
+├── services/
+│   ├── firebase.js
+│   ├── supabase.js
+│   ├── studentService.js
+│   └── teacherService.js
+│
+├── context/
+├── hooks/
+│
+└── index.js
+```
+
+<img width="2266" height="1256" alt="image" src="https://github.com/user-attachments/assets/e5275ecf-a592-4bb9-a300-9e33436817fc" />
+
+
+**Main UI Modules**
+
+Student Panel
+
+* Assignment Upload
+  <img width="2877" height="1403" alt="image" src="https://github.com/user-attachments/assets/852b88bb-724b-4160-82ff-62667338947e" />
+
+* Evaluation Dashboard
+  <img width="2371" height="1457" alt="image" src="https://github.com/user-attachments/assets/b24a72ad-b466-4d25-a2e8-970c589c0625" />
+
+* Submission History
+<img width="2378" height="926" alt="image" src="https://github.com/user-attachments/assets/8ea87117-9081-4a17-be80-7bde6ffafc21" />
+
+* Profile
+  <img width="1814" height="1432" alt="image" src="https://github.com/user-attachments/assets/dbbee5d4-53d3-4b31-9d78-91f6735a8c82" />
+
+
+Teacher Panel
+
+* Create Assignments
+  <img width="1822" height="1476" alt="image" src="https://github.com/user-attachments/assets/41c08f28-d6c7-477a-ad4b-eb60616418f3" />
+
+* View Submissions
+<img width="2876" height="1462" alt="image" src="https://github.com/user-attachments/assets/de1280ef-0c1a-49d0-9375-25578756e40f" />
+
+* Review Evaluations
+  <img width="2058" height="1462" alt="image" src="https://github.com/user-attachments/assets/f332bf7d-8c90-45c9-a8ed-d71c3db52d4b" />
+
+* Teacher Dashboard
+<img width="2877" height="1476" alt="image" src="https://github.com/user-attachments/assets/6a25e202-f797-4b42-b764-58896e997820" />
+
+---
+
+## Features
+
+### Student
+
+* Upload assignments
+* Track evaluation progress
+* View grades and AI feedback
+* Access submission history
+
+### Teacher
+
+* Create assignments
+* View student submissions
+* Review AI-generated grading
+* Monitor evaluation results
+
+### AI Pipeline
+
+* OCR-based text extraction
+* AI-driven grading
+* Automated feedback generation
+
+---
+
+## Environment Variables
+
+Create a `.env` file in both frontend and backend.
+
+### Backend `.env`
+
+```
+GEMINI_API_KEY=your_gemini_key
+
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+
+FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=your_client_email
+FIREBASE_PRIVATE_KEY=your_private_key
+```
+
+### Frontend `.env`
+
+```
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+
+VITE_SUPABASE_URL=
+VITE_SUPABASE_ANON_KEY=
+```
+
+---
+## Future Improvements
+
+* Rubric based grading
+* Multi-question structured evaluation
+* Model fine-tuning for domain subjects
+* Analytics dashboard for teachers
+* Plagiarism detection
+* Batch assignment processing
+
