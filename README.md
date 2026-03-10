@@ -1,4 +1,4 @@
-<img width="2266" height="1256" alt="image" src="https://github.com/user-attachments/assets/128ab890-2cbb-4b1c-bfcd-0fd810876a4a" /># Nexus Evaluator
+# NEXUS EVALUATOR
 
 Nexus Evaluator is an automated assignment evaluation system designed to streamline the grading workflow for teachers and provide faster feedback for students.
 
